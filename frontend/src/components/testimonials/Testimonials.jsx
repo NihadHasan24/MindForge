@@ -23,7 +23,7 @@ const Testimonials = () => {
     },
     {
       id: 3,
-      name: "Harry potter",
+      name: "John Doe",
       position: "Student",
       message:
         "This platform helped me learn so effectively. The courses are amazing and the instructors are top-notch.",
