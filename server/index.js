@@ -4,6 +4,7 @@ import { connectDb } from "./database/db.js";
 import Razorpay from "razorpay";
 import cors from "cors";
 
+
 dotenv.config();
 
 export const instance = new Razorpay({
@@ -29,6 +30,7 @@ app.use("/uploads", express.static("uploads"));
 import userRoutes from "./routes/user.js";
 import courseRoutes from "./routes/course.js";
 import adminRoutes from "./routes/admin.js";
+
 
 // using routes
 app.use("/api", userRoutes);

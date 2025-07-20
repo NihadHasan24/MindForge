@@ -3,6 +3,7 @@ import axios from "axios";
 import { server } from "../main";
 import toast, { Toaster } from "react-hot-toast";
 
+
 const UserContext = createContext();
 
 export const UserContextProvider = ({ children }) => {
@@ -70,7 +71,7 @@ export const UserContextProvider = ({ children }) => {
       setBtnLoading(false);
     }
   }
-
+  
   async function fetchUser() {
     try {
       const { data } = await axios.get(`${server}/api/user/me`, {
