@@ -39,9 +39,9 @@ const CourseDescription = ({ user }) => {
     );
 
     const options = {
-      key: "rzp_test_yOMeMyaj2wlvTt", // Enter the Key ID generated from the Dashboard
+      key: "rzp_test_us_Ty4OWiVG9t57jE", // Enter the Key ID generated from the Dashboard
       amount: order.id, // Amount is in currency subunits. Default currency is INR. Hence, 50000 refers to 50000 paise
-      currency: "DOLLAR",
+      currency: "INR",
       name: "E learning", //your business name
       description: "Learn with us",
       order_id: order.id, //This is a sample Order ID. Pass the `id` obtained in the response of Step 1
@@ -108,7 +108,7 @@ const CourseDescription = ({ user }) => {
 
               <p>{course.description}</p>
 
-              <p>Let's get started with course At ${course.price}</p>
+              <p>Let's get started with course At {course.price}</p>
 
               {user && user.subscription.includes(course._id) ? (
                 <button

@@ -3,6 +3,7 @@ import "./dashbord.css";
 import { CourseData } from "../../context/CourseContext";
 import CourseCard from "../../components/coursecard/CourseCard";
 
+
 const Dashbord = () => {
   const { mycourse } = CourseData();
   return (
@@ -18,5 +19,6 @@ const Dashbord = () => {
     </div>
   );
 };
+
 
 export default Dashbord;
