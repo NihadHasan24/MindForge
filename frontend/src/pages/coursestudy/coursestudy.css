@@ -1,4 +1,4 @@
-.course-study-page {
+/* .course-study-page {
   padding: 50px 0;
   background-color: #f5f5f5;
   display: flex;
@@ -30,5 +30,157 @@
     padding: 5px 10px;
     border: 1px solid black;
     border-radius: 5px;
+  }
+} */
+
+
+.course-study-page {
+  padding: 50px 0;
+  background-color: #f5f5f5;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-height: 80vh;
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.course-header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-bottom: 30px;
+  width: 100%;
+}
+
+.course-image {
+  width: 100%;
+  max-width: 350px;
+  height: auto;
+  border-radius: 8px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  margin-bottom: 20px;
+}
+
+.course-info {
+  text-align: center;
+  width: 100%;
+}
+
+h2 {
+  font-size: 28px;
+  color: #8a4baf;
+  margin-bottom: 10px;
+}
+
+h4 {
+  font-size: 21px;
+  color: #8a4baf;
+  margin-bottom: 15px;
+}
+
+h5 {
+  font-size: 18px;
+  color: #8a4baf;
+  margin-bottom: 10px;
+}
+
+.course-progress {
+  width: 100%;
+  max-width: 600px;
+  margin-bottom: 30px;
+}
+
+.progress-bar {
+  background-color: #e0e0e0;
+  height: 20px;
+  border-radius: 10px;
+  overflow: hidden;
+  margin-bottom: 10px;
+}
+
+.progress-fill {
+  background-color: #8a4baf;
+  height: 100%;
+  transition: width 0.5s ease-in-out;
+}
+
+.course-actions {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 30px;
+}
+
+.btn {
+  text-decoration: none;
+  padding: 10px 20px;
+  margin: 0 10px;
+  border: 1px solid #8a4baf;
+  border-radius: 5px;
+  font-size: 16px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.btn-primary {
+  background-color: #8a4baf;
+  color: white;
+}
+
+.btn-primary:hover {
+  background-color: #7a3f9d;
+}
+
+.btn-success {
+  background-color: #28a745;
+  color: white;
+  border-color: #28a745;
+}
+
+.btn-success:hover {
+  background-color: #218838;
+}
+
+.btn-info {
+  background-color: #17a2b8;
+  color: white;
+  border-color: #17a2b8;
+}
+
+.btn-info:hover {
+  background-color: #138496;
+}
+
+.course-outline {
+  width: 100%;
+  max-width: 800px;
+  background-color: white;
+  padding: 20px;
+  border-radius: 8px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.course-outline h3 {
+  font-size: 24px;
+  color: #8a4baf;
+  margin-bottom: 15px;
+}
+
+@media (min-width: 768px) {
+  .course-header {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: flex-start;
+  }
+
+  .course-image {
+    margin-right: 30px;
+    margin-bottom: 0;
+  }
+
+  .course-info {
+    text-align: left;
+    flex: 1;
   }
 }

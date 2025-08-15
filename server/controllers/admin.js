@@ -7,7 +7,7 @@ import fs from "fs";
 import { User } from "../models/User.js";
 
 export const createCourse = TryCatch(async (req, res) => {
-  const { title, description, category, createdBy, duration, price } = req.body;
+  const { title, description, category, createdBy, duration, price, isFree} = req.body;
 
   const image = req.file;
 
@@ -19,6 +19,7 @@ export const createCourse = TryCatch(async (req, res) => {
     image: image?.path,
     duration,
     price,
+    isFree: isFree === 'true'
   });
 
   res.status(201).json({

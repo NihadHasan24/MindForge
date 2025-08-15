@@ -7,7 +7,7 @@ import toast, { Toaster } from "react-hot-toast";
 const UserContext = createContext();
 
 export const UserContextProvider = ({ children }) => {
-  const [user, setUser] = useState([]);
+  const [user, setUser] = useState({quizResults:[],});
   const [isAuth, setIsAuth] = useState(false);
   const [btnLoading, setBtnLoading] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -22,7 +22,10 @@ export const UserContextProvider = ({ children }) => {
 
       toast.success(data.message);
       localStorage.setItem("token", data.token);
-      setUser(data.user);
+      setUser({
+        ...data.user,
+        quizResults: data.user.quizResults || [],
+      });
       setIsAuth(true);
       setBtnLoading(false);
       navigate("/");
@@ -71,7 +74,8 @@ export const UserContextProvider = ({ children }) => {
       setBtnLoading(false);
     }
   }
-  
+  // quizResults: [],
+
   async function fetchUser() {
     try {
       const { data } = await axios.get(`${server}/api/user/me`, {
@@ -81,7 +85,10 @@ export const UserContextProvider = ({ children }) => {
       });
 
       setIsAuth(true);
-      setUser(data.user);
+      setUser({
+        ...data.user,
+        quizResults: data.user.quizResults || [],
+      });
       setLoading(false);
     } catch (error) {
       console.log(error);

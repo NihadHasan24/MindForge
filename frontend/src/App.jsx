@@ -22,11 +22,15 @@ import AdminCourses from "./admin/Courses/AdminCourses";
 import AdminUsers from "./admin/Users/AdminUsers";
 import ForgotPassword from "./pages/auth/ForgotPassword";
 import ResetPassword from "./pages/auth/ResetPassword";
+import { QuizContextProvider } from './context/QuizContext';
+import CreateQuiz from './admin/quizzes/CreateQuiz';
+import TakeQuiz from './pages/quiz/TakeQuiz';
+import "./style/quiz.css";
 
 const App = () => {
   const { isAuth, user, loading } = UserData();
   return (
-    <>
+    <QuizContextProvider>
       {loading ? (
         <Loading />
       ) : (
@@ -57,9 +61,9 @@ const App = () => {
             <Route
               path="/course/:id"
               element={isAuth ? <CourseDescription user={user} /> : <Login />}
-            />
+            /> 
             <Route
-              path="/payment-success/:id"
+              path="/payment/success/:id"
               element={isAuth ? <PaymentSuccess user={user} /> : <Login />}
             />
             <Route
@@ -89,11 +93,19 @@ const App = () => {
               path="/admin/users"
               element={isAuth ? <AdminUsers user={user} /> : <Login />}
             />
+            <Route 
+              path="/admin/create-quiz"
+              element={isAuth && user.role === 'admin' ? <CreateQuiz /> : <Login />}
+            />
+            <Route 
+              path="/quiz/:id"  
+              element={isAuth ? <TakeQuiz user={user} /> : <Login />}
+            />
            </Routes>
           <Footer />
         </BrowserRouter>
       )}
-    </>
+    </QuizContextProvider>
   );
 };
 

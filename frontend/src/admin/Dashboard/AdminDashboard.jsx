@@ -4,6 +4,7 @@ import Layout from "../Utils/Layout";
 import axios from "axios";
 import { server } from "../../main";
 import "./dashboard.css";
+import { Link } from 'react-router-dom';
 
 const AdminDashbord = ({ user }) => {
   const navigate = useNavigate();
@@ -45,6 +46,9 @@ const AdminDashbord = ({ user }) => {
             <p>Total Users</p>
             <p>{stats.totalUsers}</p>
 
+          </div>
+          <div className="admin-actions">
+             <Link to="/admin/create-quiz" className="common-btn">Create Quiz</Link>
           </div>
         </div>
       </Layout>

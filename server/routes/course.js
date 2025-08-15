@@ -7,6 +7,8 @@ import {
   getMyCourses,
   checkout,
   paymentVerification,
+  paymentSuccess
+
 } from "../controllers/course.js";
 import { isAuth } from "../middlewares/isAuth.js";
 
@@ -19,5 +21,11 @@ router.get("/lecture/:id", isAuth, fetchLecture);
 router.get("/mycourse", isAuth, getMyCourses);
 router.post("/course/checkout/:id", isAuth, checkout);
 router.post("/verification/:id", isAuth, paymentVerification);
+
+router.post("/payment/success/:courseId",isAuth, paymentSuccess);
+
+// router.post("/payment/fail/:courseId", paymentFailure);
+// router.post("/payment/cancel/:courseId", paymentCancel);
+// router.get("/payment/info/:transactionId", isAuth, getPaymentInfo)
 
 export default router;
