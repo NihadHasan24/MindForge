@@ -29,6 +29,14 @@ const schema = new mongoose.Schema(
         ref: "Courses",
       },
     ],
+    quizResults: [{
+     quiz: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Quiz',
+    },
+    score: Number,
+    totalQuestions: Number,
+  }],
     resetPasswordExpire: Date,
   },
   {

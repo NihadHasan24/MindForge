@@ -30,9 +30,19 @@ const schema = new mongoose.Schema({
     type: String,
     required: true,
   },
+  isFree: {
+    type: Boolean,
+    default: false,
+  },
   createdAt: {
     type: Date,
     default: Date.now,
+  },
+  certificateThreshold: {
+    type: Number,
+    default: 100, // Default to 100% completion required
+    min: 0,
+    max: 100
   },
 });
 
