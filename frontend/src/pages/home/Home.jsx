@@ -2,6 +2,7 @@ import React from "react";
 import { useNavigate } from "react-router-dom";
 import "./home.css";
 import Testimonials from "../../components/testimonials/Testimonials";
+import Chatbot from "../../components/chatbot/Chatbot";
 
 const Home = () => {
   const navigate = useNavigate();
@@ -17,6 +18,7 @@ const Home = () => {
         </div>
       </div>
       <Testimonials />
+      <Chatbot />
     </div>
   );
 };

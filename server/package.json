@@ -11,6 +11,7 @@
   "license": "ISC",
   "description": "",
   "dependencies": {
+    "axios": "^1.11.0",
     "bcrypt": "^6.0.0",
     "cors": "^2.8.5",
     "dotenv": "^17.2.0",
@@ -22,6 +23,7 @@
     "pdfkit": "^0.17.1",
     "razorpay": "^2.9.6",
     "sslcommerz-lts": "^1.1.0",
+    "stripe": "^18.5.0",
     "uuid": "^11.1.0"
   },
   "devDependencies": {

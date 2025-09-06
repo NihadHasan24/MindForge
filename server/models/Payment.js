@@ -8,7 +8,6 @@ const schema = new mongoose.Schema({
   },
   validationId: {
     type: String,
-    required: true,
   },
   amount: {
     type: Number,
@@ -17,44 +16,14 @@ const schema = new mongoose.Schema({
   currency: {
     type: String,
     required: true,
-    default: 'BDT'
+    default: 'USD'
   },
   paymentStatus: {
     type: String,
     required: true,
-    enum: ['VALID', 'FAILED', 'CANCELLED', 'UNATTEMPTED', 'EXPIRED'],
+    enum: ['succeeded', 'processing', 'requires_payment_method', 'canceled'],
   },
   paymentMethod: {
-    type: String,
-  },
-  cardType: {
-    type: String,
-  },
-  cardNo: {
-    type: String,
-  },
-  bankTransactionId: {
-    type: String,
-  },
-  storeAmount: {
-    type: Number,
-  },
-  cardIssuer: {
-    type: String,
-  },
-  cardBrand: {
-    type: String,
-  },
-  cardIssuerCountry: {
-    type: String,
-  },
-  cardIssuerCountryCode: {
-    type: String,
-  },
-  riskLevel: {
-    type: String,
-  },
-  riskTitle: {
     type: String,
   },
   user: {
@@ -64,7 +33,7 @@ const schema = new mongoose.Schema({
   },
   course: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: 'Course',
+    ref: 'Courses',
     required: true,
   },
   createdAt: {
@@ -74,26 +43,3 @@ const schema = new mongoose.Schema({
 });
 
 export const Payment = mongoose.model("Payment", schema);
-// import mongoose from "mongoose";
-
-// const schema = new mongoose.Schema({
-//   razorpay_order_id: {
-//     type: String,
-//     required: true,
-//   },
-//   razorpay_payment_id: {
-//     type: String,
-//     required: true,
-//   },
-//   razorpay_signature: {
-//     type: String,
-//     required: true,
-//   },
-
-//   createdAt: {
-//     type: Date,
-//     default: Date.now,
-//   },
-// });
-
-// export const Payment = mongoose.model("Payment", schema);

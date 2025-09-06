@@ -9,7 +9,7 @@ import toast from "react-hot-toast";
 const AdminUsers = ({ user }) => {
   const navigate = useNavigate();
 
-  if (user && user.mainrole !== "superadmin") return navigate("/");
+  if (user && user.role !== "admin") return navigate("/");
 
   const [users, setUsers] = useState([]);
 
@@ -47,7 +47,7 @@ const AdminUsers = ({ user }) => {
         toast.success(data.message);
         fetchUsers();
       } catch (error) {
-        toast.error(error.response.data.message);
+        toast.error(error.response?.data?.message || 'Failed to update role');
       }
     }
   };
@@ -70,7 +70,7 @@ const AdminUsers = ({ user }) => {
 
           {users &&
             users.map((e, i) => (
-              <tbody>
+              <tbody key={e._id}>
                 <tr>
                   <td>{i + 1}</td>
                   <td>{e.name}</td>

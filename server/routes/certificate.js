@@ -1,10 +1,13 @@
 
 import express from "express";
-import { generateCertificate } from "../controllers/certificate.js";
 import { isAuth } from "../middlewares/isAuth.js";
+import { getQuizCertificatePdf } from "../controllers/certificate.js";
 
 const router = express.Router();
 
-router.get("/generate/:courseId", isAuth, generateCertificate);
+// Certificates are generated automatically for premium course quizzes on perfect scores.
+// This route is intentionally minimal and can be expanded for future downloads.
+router.get("/health", (_req, res) => res.json({ ok: true }));
+router.get("/quiz/:id/pdf", isAuth, getQuizCertificatePdf);
 
 export default router;

@@ -12,6 +12,18 @@ const certificateSchema = new mongoose.Schema({
     ref: 'Courses',
     required: true
   },
+  // Certificates are only for premium course quizzes
+  quiz: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Quiz',
+    required: true,
+  },
+  type: {
+    type: String,
+    enum: ['quiz'],
+    default: 'quiz',
+    required: true,
+  },
   issueDate: {
     type: Date,
     default: Date.now
@@ -21,5 +33,8 @@ const certificateSchema = new mongoose.Schema({
     unique: true
   }
 });
+
+// Ensure one certificate per user per quiz
+certificateSchema.index({ user: 1, quiz: 1 }, { unique: true });
 
 export const Certificate = mongoose.model("Certificate", certificateSchema);

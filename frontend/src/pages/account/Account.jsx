@@ -32,13 +32,15 @@ const Account = ({ user }) => {
               <strong>Email - {user.email}</strong>
             </p>
 
-            <button
-              onClick={() => navigate(`/${user._id}/dashboard`)}
-              className="common-btn"
-            >
-              <MdDashboard />
-              Dashboard
-            </button>
+            {user.role !== "admin" && (
+              <button
+                onClick={() => navigate(`/${user._id}/dashboard`)}
+                className="common-btn"
+              >
+                <MdDashboard />
+                Dashboard
+              </button>
+            )}
 
             <br />
 

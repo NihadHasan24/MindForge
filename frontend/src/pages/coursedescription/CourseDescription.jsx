@@ -74,7 +74,7 @@ const CourseDescription = ({ user }) => {
                   <h2>{course.title}</h2>
                   <p>Instructor: {course.createdBy}</p>
                   <p>Duration: {course.duration} weeks</p>
-                  <p>{course.isFree ? 'This course is free' : `Price: $${course.price}`}</p>
+                  <p>{course.isFree ? 'This course is free' : 'This course is premium'}</p>
                 </div>
               </div>
 
@@ -88,7 +88,7 @@ const CourseDescription = ({ user }) => {
                   Study
                 </button>
               ) : (
-                <button onClick={enrollHandler} disabled={loading} className="common-btn">
+                <button onClick={enrollHandler} disabled={loading || (user && user.role === 'admin')} className="common-btn">
                   {loading ? "Processing..." : (course.isFree ? "Enroll for Free" : "Buy Now")}
                 </button>
               )}

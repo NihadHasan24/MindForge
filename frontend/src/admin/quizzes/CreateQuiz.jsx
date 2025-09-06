@@ -9,6 +9,7 @@ const CreateQuiz = () => {
   const { courses } = CourseData();
   const [title, setTitle] = useState('');
   const [courseId, setCourseId] = useState('');
+  const [visibility, setVisibility] = useState('public'); // 'public' | 'course'
   const [questions, setQuestions] = useState([{ question: '', options: ['', '', '', ''], correctAnswer: 0 }]);
 
   const handleQuestionChange = (index, field, value) => {
@@ -30,15 +31,20 @@ const CreateQuiz = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      await createQuiz({ title, questions, courseId });
+      const payload = { title, questions };
+      if (visibility === 'course') payload.courseId = courseId;
+      await createQuiz(payload);
       toast.success('Quiz created successfully');
       setTitle('');
       setCourseId('');
+      setVisibility('public');
       setQuestions([{ question: '', options: ['', '', '', ''], correctAnswer: 0 }]);
     } catch (error) {
-      toast.error('Failed to create quiz');
+      toast.error(error?.response?.data?.message || 'Failed to create quiz');
     }
   };
+
+  const premiumCourses = (courses || []).filter((c) => !c.isFree && Number(c.price) > 0);
 
   return (
     <div className="create-quiz">
@@ -51,12 +57,25 @@ const CreateQuiz = () => {
           placeholder="Quiz Title"
           required
         />
-        <select value={courseId} onChange={(e) => setCourseId(e.target.value)} required>
-          <option value="">Select Course</option>
-          {courses.map((course) => (
-            <option key={course._id} value={course._id}>{course.title}</option>
-          ))}
+
+        <label>Visibility</label>
+        <select value={visibility} onChange={(e) => setVisibility(e.target.value)}>
+          <option value="public">Public (all users)</option>
+          <option value="course">Premium Course</option>
         </select>
+
+        {visibility === 'course' && (
+          <>
+            <label>Premium Course</label>
+            <select value={courseId} onChange={(e) => setCourseId(e.target.value)} required>
+              <option value="">Select Premium Course</option>
+              {premiumCourses.map((course) => (
+                <option key={course._id} value={course._id}>{course.title}</option>
+              ))}
+            </select>
+          </>
+        )}
+
         {questions.map((question, index) => (
           <div key={index} className="question">
             <input

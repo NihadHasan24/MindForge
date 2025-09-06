@@ -122,6 +122,8 @@ const Lecture = ({ user }) => {
   const [completedLec, setCompletedLec] = useState("");
   const [lectLength, setLectLength] = useState("");
   const [progress, setProgress] = useState([]);
+  const [comments, setComments] = useState([]);
+  const [newComment, setNewComment] = useState("");
 
   async function fetchProgress() {
     try {
@@ -142,6 +144,26 @@ const Lecture = ({ user }) => {
       console.log(error);
     }
   }
+
+  const fetchComments = async (lectureId) => {
+    try {
+      const { data } = await axios.get(`${server}/api/lecture/${lectureId}/comments`, {
+        headers: { token: localStorage.getItem('token') },
+      });
+      setComments(data.comments || []);
+    } catch (e) {}
+  };
+
+  const postComment = async () => {
+    if (!newComment.trim()) return;
+    try {
+      await axios.post(`${server}/api/lecture/${lecture._id}/comments`, { content: newComment }, {
+        headers: { token: localStorage.getItem('token') },
+      });
+      setNewComment("");
+      fetchComments(lecture._id);
+    } catch (e) {}
+  };
 
   const addProgress = async (id) => {
     try {
@@ -196,6 +218,20 @@ const Lecture = ({ user }) => {
                         onEnded={() => addProgress(lecture._id)}
                       ></video>
                       <h1>{lecture.title}</h1>
+                      <div className="comments">
+                        <h4>Discussion</h4>
+                        <div className="comment-list">
+                          {comments.map((c) => (
+                            <div key={c._id} className="comment-item">
+                              <strong>{c.user?.name || 'User'}:</strong> {c.content}
+                            </div>
+                          ))}
+                        </div>
+                        <div className="comment-input">
+                          <input value={newComment} onChange={(e) => setNewComment(e.target.value)} placeholder="Add a comment" />
+                          <button className="common-btn" onClick={postComment}>Post</button>
+                        </div>
+                      </div>
                       <h3>{lecture.description}</h3>
                     </>
                   ) : (
@@ -262,7 +298,7 @@ const Lecture = ({ user }) => {
                 lectures.map((e, i) => (
                   <>
                     <div
-                      onClick={() => fetchLecture(e._id)}
+                      onClick={() => { fetchLecture(e._id); fetchComments(e._id); }}
                       key={i}
                       className={`lecture-number ${
                         lecture._id === e._id && "active"

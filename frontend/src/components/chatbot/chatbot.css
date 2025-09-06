@@ -1,0 +1,11 @@
+.chatbot { position: fixed; z-index: 1000; }
+.chatbot-toggle { padding: 8px 12px; cursor: grab; user-select: none; }
+.chatbot-toggle.dragging { cursor: grabbing; }
+.chatbot-panel { width: 340px; height: 420px; background: #fff; border: 1px solid #ddd; border-radius: 8px; display: flex; flex-direction: column; box-shadow: 0 8px 24px rgba(0,0,0,0.15); }
+.chatbot-messages { flex: 1; padding: 10px; overflow-y: auto; }
+.chatbot-input { display: flex; gap: 8px; padding: 10px; border-top: 1px solid #eee; }
+.chatbot-input input { flex: 1; padding: 6px 8px; }
+.msg { margin: 6px 0; padding: 8px 10px; border-radius: 6px; white-space: pre-wrap; }
+.msg.user { background: #eef5ff; align-self: flex-end; }
+.msg.assistant { background: #f6f6f6; align-self: flex-start; }
+

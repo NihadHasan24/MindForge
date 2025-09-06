@@ -44,6 +44,11 @@ const schema = new mongoose.Schema({
     min: 0,
     max: 100
   },
+  expectedLectures: {
+    type: Number,
+    default: 0,
+    min: 0,
+  },
 });
 
 export const Courses = mongoose.model("Courses", schema);

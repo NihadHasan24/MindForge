@@ -24,13 +24,10 @@ const CourseStudy = ({ user }) => {
 
   const fetchProgress = async () => {
     try {
-      const { data } = await axios.get(`${server}/api/course/progress/${params.id}`, {
+      const { data } = await axios.get(`${server}/api/user/progress?course=${params.id}`, {
         headers: { token: localStorage.getItem("token") },
       });
-      setProgress(data.progressPercentage);
-      if (data.certificate) {
-        setCertificate(data.certificate);
-      }
+      setProgress(data.courseProgressPercentage || 0);
     } catch (error) {
       console.error("Error fetching progress:", error);
     }

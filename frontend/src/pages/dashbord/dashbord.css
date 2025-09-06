@@ -210,3 +210,37 @@
 .available-quizzes a:hover {
   text-decoration: underline;
 }
+.certificates-section {
+  margin-top: 2rem;
+}
+
+.certificate-list {
+  list-style-type: none;
+  padding: 0;
+}
+
+.certificate-item {
+  background-color: #f9f9f9;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  padding: 1rem;
+  margin-bottom: 1rem;
+}
+
+.certificate-item h4 {
+  margin-top: 0;
+}
+
+.certificate-item a {
+  display: inline-block;
+  margin-top: 0.5rem;
+  padding: 0.5rem 1rem;
+  background-color: #007bff;
+  color: white;
+  text-decoration: none;
+  border-radius: 4px;
+}
+
+.certificate-item a:hover {
+  background-color: #0056b3;
+}

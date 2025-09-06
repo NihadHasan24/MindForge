@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect } from "react";
 import "./App.css";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Home from "./pages/home/Home";
@@ -26,9 +26,36 @@ import { QuizContextProvider } from './context/QuizContext';
 import CreateQuiz from './admin/quizzes/CreateQuiz';
 import TakeQuiz from './pages/quiz/TakeQuiz';
 import "./style/quiz.css";
+import { server } from './main';
+import Leaderboard from './pages/leaderboard/Leaderboard';
 
 const App = () => {
   const { isAuth, user, loading } = UserData();
+
+  useEffect(() => {
+    // Register service worker and subscribe to push
+    (async () => {
+      try {
+        if ('serviceWorker' in navigator) {
+          const reg = await navigator.serviceWorker.register('/sw.js');
+          const permission = await Notification.requestPermission();
+          if (permission === 'granted' && isAuth) {
+            const existing = await reg.pushManager.getSubscription();
+            if (!existing) {
+              // In a real app, pass VAPID public key and create an applicationServerKey
+              const sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: undefined });
+              await fetch(`${server}/api/user/push-subscribe`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', token: localStorage.getItem('token') },
+                body: JSON.stringify(sub),
+              });
+            }
+          }
+        }
+      } catch {}
+    })();
+  }, [isAuth]);
+
   return (
     <QuizContextProvider>
       {loading ? (
@@ -67,8 +94,8 @@ const App = () => {
               element={isAuth ? <PaymentSuccess user={user} /> : <Login />}
             />
             <Route
-              path="/:id/dashboard"
-              element={isAuth ? <Dashbord user={user} /> : <Login />}
+              path=":id/dashboard"
+              element={isAuth ? (user.role === 'admin' ? <AdminDashbord user={user} /> : <Dashbord user={user} />) : <Login />}
             />
             <Route
               path="/course/study/:id"
@@ -101,6 +128,7 @@ const App = () => {
               path="/quiz/:id"  
               element={isAuth ? <TakeQuiz user={user} /> : <Login />}
             />
+            <Route path="/leaderboard" element={<Leaderboard />} />
            </Routes>
           <Footer />
         </BrowserRouter>

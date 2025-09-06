@@ -47,9 +47,9 @@ const AdminDashbord = ({ user }) => {
             <p>{stats.totalUsers}</p>
 
           </div>
-          <div className="admin-actions">
+          {/* <div className="admin-actions">
              <Link to="/admin/create-quiz" className="common-btn">Create Quiz</Link>
-          </div>
+          </div> */}
         </div>
       </Layout>
     </div>

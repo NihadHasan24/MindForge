@@ -9,9 +9,17 @@ export const CourseContextProvider = ({ children }) => {
   const [course, setCourse] = useState([]);
   const [mycourse, setMyCourse] = useState([]);
 
-  async function fetchCourses() {
+  async function fetchCourses(params = {}) {
     try {
-      const { data } = await axios.get(`${server}/api/course/all`);
+      const searchParams = new URLSearchParams();
+      Object.entries(params).forEach(([key, value]) => {
+        if (value !== undefined && value !== null && value !== "") {
+          searchParams.append(key, value);
+        }
+      });
+      const query = searchParams.toString();
+      const url = query ? `${server}/api/course/all?${query}` : `${server}/api/course/all`;
+      const { data } = await axios.get(url);
 
       setCourses(data.courses);
     } catch (error) {

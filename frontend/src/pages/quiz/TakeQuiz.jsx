@@ -2,12 +2,14 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { QuizData } from '../../context/QuizContext';
 import toast from 'react-hot-toast';
+import { UserData } from '../../context/UserContext';
 
 const TakeQuiz = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const { fetchQuiz, currentQuiz, submitQuiz } = QuizData();
   const [answers, setAnswers] = useState([]);
+  const { user } = UserData();
 
   useEffect(() => {
     fetchQuiz(id);
@@ -27,6 +29,10 @@ const TakeQuiz = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (user && user.role === 'admin') {
+      toast.error('Admins cannot participate in quizzes');
+      return;
+    }
     try {
       const result = await submitQuiz(id, answers);
       toast.success(`Quiz submitted! Your score: ${result.score}/${result.totalQuestions}`);

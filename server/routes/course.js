@@ -6,11 +6,12 @@ import {
   fetchLecture,
   getMyCourses,
   checkout,
-  paymentVerification,
-  paymentSuccess
+  generateCertificate
 
 } from "../controllers/course.js";
 import { isAuth } from "../middlewares/isAuth.js";
+import { createStripeSession, stripeWebhook, stripeSuccess } from "../controllers/stripe.js";
+import { listComments, addComment } from "../controllers/comment.js";
 
 const router = express.Router();
 
@@ -20,12 +21,15 @@ router.get("/lectures/:id", isAuth, fetchLectures);
 router.get("/lecture/:id", isAuth, fetchLecture);
 router.get("/mycourse", isAuth, getMyCourses);
 router.post("/course/checkout/:id", isAuth, checkout);
-router.post("/verification/:id", isAuth, paymentVerification);
+router.post("/generate-certificate/:courseId", isAuth, generateCertificate);
 
-router.post("/payment/success/:courseId",isAuth, paymentSuccess);
+// Stripe payment routes
+router.post("/stripe/create-session/:courseId", isAuth, createStripeSession);
+router.post("/stripe/webhook", stripeWebhook);
+router.get("/stripe/success", isAuth, stripeSuccess);
 
-// router.post("/payment/fail/:courseId", paymentFailure);
-// router.post("/payment/cancel/:courseId", paymentCancel);
-// router.get("/payment/info/:transactionId", isAuth, getPaymentInfo)
+// Comments for lessons
+router.get("/lecture/:lectureId/comments", isAuth, listComments);
+router.post("/lecture/:lectureId/comments", isAuth, addComment);
 
 export default router;

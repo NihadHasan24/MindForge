@@ -1,19 +1,49 @@
-import { sslcz } from '../index.js';
 import TryCatch from "../middlewares/TryCatch.js";
 import { Courses } from "../models/Courses.js";
 import { Lecture } from "../models/Lecture.js";
 import { User } from "../models/User.js";
-import crypto from "crypto";
 import { Payment } from "../models/Payment.js";
-import { Certificate } from "../models/Certificate.js";
+// Certificates are only generated for premium course quizzes
 import { Progress } from "../models/Progress.js";
-import { v4 as uuidv4 } from 'uuid';
+// import { v4 as uuidv4 } from 'uuid';
+import { stripe } from '../index.js';
 
 export const getAllCourses = TryCatch(async (req, res) => {
-  const courses = await Courses.find();
-  res.json({
-    courses,
-  });
+  const { q, category, isFree, minPrice, maxPrice } = req.query;
+
+  const filter = {};
+  if (q) {
+    const qLower = String(q).toLowerCase().trim();
+    const isKeywordOnly = qLower === 'premium' || qLower === 'paid' || qLower === 'free';
+    if (!isKeywordOnly) {
+      filter.$or = [
+        { title: { $regex: q, $options: 'i' } },
+        { description: { $regex: q, $options: 'i' } },
+        { createdBy: { $regex: q, $options: 'i' } },
+        { category: { $regex: q, $options: 'i' } },
+      ];
+    }
+    if (qLower.includes('premium') || qLower.includes('paid')) {
+      filter.isFree = false;
+    }
+    if (qLower.includes('free')) {
+      filter.isFree = true;
+    }
+  }
+  if (category) filter.category = category;
+  if (typeof isFree !== 'undefined') filter.isFree = isFree === 'true';
+  if (minPrice || maxPrice) {
+    filter.price = {};
+    if (minPrice) filter.price.$gte = Number(minPrice);
+    if (maxPrice) filter.price.$lte = Number(maxPrice);
+  }
+
+  const results = await Courses.find(filter).lean();
+  const courses = results.map((c) => ({
+    ...c,
+    isPremium: !c.isFree && Number(c.price) > 0,
+  }));
+  res.json({ courses });
 });
 
 export const getSingleCourse = TryCatch(async (req, res) => {
@@ -29,9 +59,8 @@ export const fetchLectures = TryCatch(async (req, res) => {
 
   const user = await User.findById(req.user._id);
 
-  if (user.role === "admin") {
-    return res.json({ lectures });
-  }
+  // Allow admins to manage/view lectures without enrollment
+  if (user.role === 'admin') return res.json({ lectures });
 
   if (!user.subscription.includes(req.params.id))
     return res.status(400).json({
@@ -46,9 +75,8 @@ export const fetchLecture = TryCatch(async (req, res) => {
 
   const user = await User.findById(req.user._id);
 
-  if (user.role === "admin") {
-    return res.json({ lecture });
-  }
+  // Allow admins to view a specific lecture without enrollment
+  if (user.role === 'admin') return res.json({ lecture });
 
   if (!user.subscription.includes(lecture.course))
     return res.status(400).json({
@@ -59,312 +87,151 @@ export const fetchLecture = TryCatch(async (req, res) => {
 });
 
 export const getMyCourses = TryCatch(async (req, res) => {
-  const courses = await Courses.find({ _id: req.user.subscription });
+  const courses = await Courses.find({ _id: { $in: req.user.subscription } }).lean();
+  const payments = await Payment.find({ user: req.user._id, paymentStatus: 'succeeded' }).select('course').lean();
+  const paidCourseIds = new Set(payments.map((p) => String(p.course)));
+  const annotated = courses.map((c) => ({
+    ...c,
+    isPremiumForUser: paidCourseIds.has(String(c._id)) || (!c.isFree && Number(c.price) > 0),
+  }));
 
-  res.json({
-    courses,
-  });
+  res.json({ courses: annotated });
 });
 
 export const checkout = TryCatch(async (req, res) => {
   const user = await User.findById(req.user._id);
-
   const course = await Courses.findById(req.params.id);
 
+  if (user.role === "admin")
+    return res.status(403).json({ message: "Admins cannot purchase courses" });
+
   if (user.subscription.includes(course._id)) {
-    return res.status(400).json({
-      message: "You already have this course",
-    });
+    return res.status(400).json({ message: "You already have this course" });
   }
-    if (course.isFree) {
-    // For free courses, directly add to user's subscription
+
+  if (course.isFree) {
     user.subscription.push(course._id);
     await user.save();
-
-    // Create a progress record for the course
-    await Progress.create({
-      course: course._id,
-      completedLectures: [],
-      user: user._id,
-    });
-
-    return res.status(200).json({
-      message: "Free course added to your subscription",
-      redirectUrl: `${process.env.FRONTEND_URL}/course/study/${course._id}`,
-    });
+    await Progress.create({ course: course._id, completedLectures: [], user: user._id });
+    return res.status(200).json({ message: "Free course added to your subscription", redirectUrl: `${process.env.FRONTEND_URL}/course/study/${course._id}` });
   }
 
-  const data = {
-    total_amount: course.price,
-    currency: 'BDT',
-    tran_id: 'REF123' + new Date().getTime(), // use unique tran_id for each api call
-    success_url: `${process.env.BACKEND_URL}/api/payment/success/${course._id}`,
-    fail_url: `${process.env.BACKEND_URL}/api/payment/fail`,
-    cancel_url: `${process.env.BACKEND_URL}/api/payment/cancel`,
-    ipn_url: `${process.env.BACKEND_URL}/api/payment/ipn`,
-    shipping_method: 'No',
-    product_name: course.title,
-    product_category: 'Digital',
-    product_profile: 'general',
-    cus_name: user.name,
-    cus_email: user.email,
-    cus_add1: 'Dhaka',
-    cus_add2: 'Dhaka',
-    cus_city: 'Dhaka',
-    cus_state: 'Dhaka',
-    cus_postcode: '1000',
-    cus_country: 'Bangladesh',
-    cus_phone: '01711111111',
-    cus_fax: '01711111111',
-  };
-
-  const sslczResponse = await sslcz.init(data);
-
-  res.status(201).json({
-    url: sslczResponse.GatewayPageURL,
-    course,
+  const session = await stripe.checkout.sessions.create({
+    mode: 'payment',
+    payment_method_types: ['card'],
+    line_items: [{
+      price_data: {
+        currency: 'usd',
+        product_data: { name: course.title },
+        unit_amount: Math.round(Number(course.price) * 100),
+      },
+      quantity: 1,
+    }],
+    customer_email: user.email,
+    success_url: `${process.env.FRONTEND_URL}/payment/success/${course._id}?status=success&session_id={CHECKOUT_SESSION_ID}`,
+    cancel_url: `${process.env.FRONTEND_URL}/payment/success/${course._id}?status=cancel`,
+    metadata: { courseId: String(course._id), userId: String(user._id) },
   });
+
+  res.status(201).json({ url: session.url, course });
 });
 
-// export const checkout = TryCatch(async (req, res) => {
-//   const user = await User.findById(req.user._id);
-
-//   const course = await Courses.findById(req.params.id);
-
-//   if (user.subscription.includes(course._id)) {
-//     return res.status(400).json({
-//       message: "You already have this course",
-//     });
-//   }
-
-//   const options = {
-//     amount: Number(course.price * 100),
-//     currency: "INR",
-//   };
-
-//   const order = await instance.orders.create(options);
-
-//   res.status(201).json({
-//     order,
-//     course,
-//   });
-// });
-
-// In your course.js controller file
-export const  paymentVerification = TryCatch(async (req, res) => {
-  const { tran_id, val_id } = req.body;
-  const courseId = req.params.courseId;
-
-  // Verify the payment with SSL Commerz
-  const response = await sslcz.validate({ val_id });
-
-  if (response.status === 'VALID') {
-    const course = await Courses.findById(courseId);
-    if (!course) {
-      return res.status(404).json({ message: "Course not found" });
-    }
-
-    const user = await User.findById(req.user._id);
-    if (!user) {
-      return res.status(404).json({ message: "User not found" });
-    }
-
-    // Add the course to user's subscription if not already present
-    if (!user.subscription.includes(course._id)) {
-      user.subscription.push(course._id);
-    }
-
-    // Create a progress record for the course if not exists
-    const progressExists = await Progress.findOne({
-      course: course._id,
-      user: user._id,
-    });
-
-    if (!progressExists) {
-      await Progress.create({
-        course: course._id,
-        completedLectures: [],
-        user: user._id,
-      });
-    }
-
-    await user.save();
-
-    res.status(200).json({
-      success: true,
-      message: "Payment verified successfully",
-    });
-  } else {
-    res.status(400).json({
-      success: false,
-      message: "Payment verification failed",
-    });
-  }
-});
 export const paymentSuccess = TryCatch(async (req, res) => {
   const { courseId } = req.params;
-  const { tran_id, val_id } = req.query;
+  const { session_id } = req.query;
 
-  // Verify the payment with SSL Commerz
-  const response = await sslcz.validate({ val_id });
+  if (!session_id) {
+    return res.redirect(`${process.env.FRONTEND_URL}/payment/success/${courseId}?status=failure`);
+  }
 
-  if (response.status === 'VALID') {
-    try {
-      const course = await Courses.findById(courseId);
-      if (!course) {
-        return res.status(404).json({ message: "Course not found" });
-      }
+  const session = await stripe.checkout.sessions.retrieve(session_id);
 
-      const user = await User.findOne({ email: response.value.cus_email });
-      if (!user) {
-        return res.status(404).json({ message: "User not found" });
-      }
+  if (session.payment_status === 'paid') {
+    const user = await User.findById(session.metadata.userId);
+    const course = await Courses.findById(session.metadata.courseId);
 
-      // Add the course to user's subscription if not already present
+    if (user && course) {
       if (!user.subscription.includes(course._id)) {
         user.subscription.push(course._id);
       }
 
-      // Create a progress record for the course if not exists
-      const progressExists = await Progress.findOne({
-        course: course._id,
-        user: user._id,
-      });
-
+      const progressExists = await Progress.findOne({ course: course._id, user: user._id });
       if (!progressExists) {
-        await Progress.create({
-          course: course._id,
-          completedLectures: [],
-          user: user._id,
-        });
+        await Progress.create({ course: course._id, completedLectures: [], user: user._id });
       }
 
       await user.save();
 
-      // Create a payment record
-      await Payment.create({
-        transactionId: tran_id,
-        validationId: val_id,
-        course: course._id,
-        user: user._id,
-        amount: response.value.total_amount,
-      });
-
-      res.redirect(`${process.env.FRONTEND_URL}/payment-success/${courseId}?status=success&tran_id=${tran_id}&val_id=${val_id}`);
-    } catch (error) {
-      console.error('Error processing payment:', error);
-      res.redirect(`${process.env.FRONTEND_URL}/payment-success/${courseId}?status=error`);
+      try {
+        await Payment.create({
+          transactionId: session.payment_intent,
+          validationId: session.id,
+          course: course._id,
+          user: user._id,
+          amount: Number(session.amount_total) / 100,
+          currency: session.currency,
+          paymentStatus: session.payment_status,
+          paymentMethod: session.payment_method_types[0],
+          cardType: session.payment_method_types[0],
+          cardNo: session.payment_method_details?.card?.last4,
+          bankTransactionId: session.payment_intent,
+          storeAmount: Number(session.amount_total) / 100,
+          cardIssuer: session.payment_method_details?.card?.brand,
+          cardBrand: session.payment_method_details?.card?.brand,
+          cardIssuerCountry: session.payment_method_details?.card?.country,
+          cardIssuerCountryCode: session.payment_method_details?.card?.country_code,
+          riskLevel: session.risk_level,
+          riskTitle: session.risk_title,
+        });
+      } catch (e) {
+        // ignore duplicate transaction errors
+      }
     }
+
+    res.redirect(`${process.env.FRONTEND_URL}/payment/success/${courseId}?status=success`);
   } else {
-    res.redirect(`${process.env.FRONTEND_URL}/payment-success/${courseId}?status=failure`);
+    res.redirect(`${process.env.FRONTEND_URL}/payment/success/${courseId}?status=failure`);
   }
 });
-// export const paymentSuccess = TryCatch(async (req, res) => {
-//   const { tran_id, val_id } = req.body;
-//   const courseId = req.params.courseId;
 
-//   // Verify the payment with SSL Commerz
-//   const response = await sslcz.validate({ val_id });
+export const paymentVerification = TryCatch(async (req, res) => {
+  const { tran_id, val_id } = req.body;
+  const courseId = req.params.courseId;
 
-//   if (response.status === 'VALID') {
-//     await Payment.create({
-//       transactionId: tran_id,
-//       validationId: val_id,
-//     });
+  // Verify the payment with SSL Commerz
+  // This function is no longer used as payment verification is handled by Stripe.
+  // Keeping it for now as it might be used elsewhere or for historical context.
+  // If SSLCommerz is no longer needed, this function can be removed.
+  // For now, we'll return a placeholder response.
+  res.status(200).json({
+    success: true,
+    message: "Payment verification handled by Stripe.",
+  });
+});
 
-//     const user = await User.findById(req.user._id);
-//     const course = await Courses.findById(courseId);
-
-//     user.subscription.push(course._id);
-
-//     await Progress.create({
-//       course: course._id,
-//       completedLectures: [],
-//       user: req.user._id,
-//     });
-
-//     await user.save();
-
-//     res.redirect(`${process.env.FRONTEND_URL}/payment-success/${tran_id}`);
-//   } else {
-//     res.redirect(`${process.env.FRONTEND_URL}/payment-failure`);
-//   }
-// });
-
-// export const paymentVerification = TryCatch(async (req, res) => {
-//   const { razorpay_order_id, razorpay_payment_id, razorpay_signature } =
-//     req.body;
-
-//   const body = razorpay_order_id + "|" + razorpay_payment_id;
-
-//   const expectedSignature = crypto
-//     .createHmac("sha256", process.env.Razorpay_Secret)
-//     .update(body)
-//     .digest("hex");
-
-//   const isAuthentic = expectedSignature === razorpay_signature;
-
-//   if (isAuthentic) {
-//     await Payment.create({
-//       razorpay_order_id,
-//       razorpay_payment_id,
-//       razorpay_signature,
-//     });
-
-//     const user = await User.findById(req.user._id);
-
-//     const course = await Courses.findById(req.params.id);
-
-//     user.subscription.push(course._id);
-
-//     await Progress.create({
-//       course: course._id,
-//       completedLectures: [],
-//       user: req.user._id,
-//     });
-
-//     await user.save();
-
-//     res.status(200).json({
-//       message: "Course Purchased Successfully",
-//     });
-//   } else {
-//     return res.status(400).json({
-//       message: "Payment Failed",
-//     });
-//   }
-// });
 export const addProgress = TryCatch(async (req, res) => {
-  const { courseId, lectureId } = req.query;
+  const courseId = req.query.courseId || req.query.course;
+  const { lectureId } = req.query;
   const userId = req.user._id;
+
+  if (!courseId || !lectureId) {
+    return res.status(400).json({ message: "Missing course or lecture id" });
+  }
 
   // Check if the user is enrolled in the course
   const user = await User.findById(userId);
   if (!user.subscription.includes(courseId)) {
-    return res.status(403).json({
-      message: "You are not enrolled in this course",
-    });
+    return res.status(403).json({ message: "You are not enrolled in this course" });
   }
 
   const course = await Courses.findById(courseId);
   if (!course) {
-    return res.status(404).json({
-      message: "Course not found",
-    });
+    return res.status(404).json({ message: "Course not found" });
   }
 
-  let progress = await Progress.findOne({
-    user: userId,
-    course: courseId,
-  });
-
+  let progress = await Progress.findOne({ user: userId, course: courseId });
   if (!progress) {
-    // If progress doesn't exist, create a new one
-    progress = new Progress({
-      user: userId,
-      course: courseId,
-      completedLectures: [],
-    });
+    progress = new Progress({ user: userId, course: courseId, completedLectures: [] });
   }
 
   if (!progress.completedLectures.includes(lectureId)) {
@@ -372,120 +239,55 @@ export const addProgress = TryCatch(async (req, res) => {
     await progress.save();
   }
 
-  // Calculate progress percentage
-  const totalLectures = course.lectures.length;
+  const targetLectures = Number(course.expectedLectures) > 0
+    ? Number(course.expectedLectures)
+    : await Lecture.countDocuments({ course: courseId });
+  const totalLectures = targetLectures;
   const completedLectures = progress.completedLectures.length;
-  const progressPercentage = (completedLectures / totalLectures) * 100;
-
-  // Check if the course is completed and generate certificate if needed
-  if (progressPercentage >= course.certificateThreshold) {
-    let certificate = await Certificate.findOne({
-      user: userId,
-      course: courseId,
-    });
-
-    if (!certificate) {
-      certificate = await Certificate.create({
-        user: userId,
-        course: courseId,
-        certificateNumber: uuidv4()
-      });
-
-      return res.status(200).json({
-        message: "Course completed and certificate generated",
-        progress,
-        progressPercentage,
-        certificate,
-      });
-    }
-  }
+  const completedClamped = Math.min(completedLectures, totalLectures);
+  const courseProgressPercentage = Math.min(100, Math.round(((completedClamped * 100) / totalLectures) * 100) / 100);
 
   res.status(200).json({
-    message: "Progress updated successfully",
-    progress,
-    progressPercentage,
+    message: "Progress recorded",
+    courseProgressPercentage,
+    completedLectures,
+    allLectures: totalLectures,
+    progress: [progress],
   });
 });
 
 export const getYourProgress = TryCatch(async (req, res) => {
-  const { courseId } = req.params;
+  const courseId = req.query.courseId || req.query.course;
   const userId = req.user._id;
+
+  if (!courseId) return res.status(400).json({ message: "Missing course id" });
 
   // Check if the user is enrolled in the course
   const user = await User.findById(userId);
   if (!user.subscription.includes(courseId)) {
-    return res.status(403).json({
-      message: "You are not enrolled in this course",
-    });
+    return res.status(403).json({ message: "You are not enrolled in this course" });
   }
 
-  const progress = await Progress.findOne({
-    user: userId,
-    course: courseId,
-  });
-
-  if (!progress) {
-    return res.status(404).json({
-      message: "No progress found for this course",
-    });
-  }
-
-  // Get the total number of lectures in the course
   const course = await Courses.findById(courseId);
-  const totalLectures = course.lectures.length;
+  if (!course) return res.status(404).json({ message: "Course not found" });
 
-  const completedLectures = progress.completedLectures.length;
-  const progressPercentage = (completedLectures / totalLectures) * 100;
+  const progressDoc = await Progress.findOne({ user: userId, course: courseId });
+
+  const targetLectures = Number(course.expectedLectures) > 0
+    ? Number(course.expectedLectures)
+    : await Lecture.countDocuments({ course: courseId });
+  const totalLectures = targetLectures;
+  const completedLectures = progressDoc ? progressDoc.completedLectures.length : 0;
+  const completedClamped = Math.min(completedLectures, totalLectures);
+  const courseProgressPercentage = totalLectures > 0 ? Math.min(100, Math.round(((completedClamped * 100) / totalLectures) * 100) / 100) : 0;
 
   res.status(200).json({
-    progress,
-    totalLectures,
+    courseProgressPercentage,
     completedLectures,
-    progressPercentage,
+    allLectures: totalLectures,
+    progress: progressDoc ? [progressDoc] : [],
   });
 });
-
-// export const addProgress = TryCatch(async (req, res) => {
-//   const progress = await Progress.findOne({
-//     user: req.user._id,
-//     course: req.query.course,
-//   });
-
-//   const { lectureId } = req.query;
-
-//   if (progress.completedLectures.includes(lectureId)) {
-//     return res.json({
-//       message: "Progress recorded",
-//     });
-//   }
-
-//   progress.completedLectures.push(lectureId);
-
-//   await progress.save();
-
-//   res.status(201).json({
-//     message: "new Progress added",
-//   });
-// });
-
-// export const getYourProgress = TryCatch(async (req, res) => {
-//   const progress = await Progress.find({
-//     user: req.user._id,
-//     course: req.query.course,
-//   });
-
-//   if (!progress) return res.status(404).json({ message: "null" });
-
-//   const allLectures = (await Lecture.find({ course: req.query.course })).length;
-
-//   const completedLectures = progress[0].completedLectures.length;
-
-//   const courseProgressPercentage = (completedLectures * 100) / allLectures;
-
-//   res.json({
-//     courseProgressPercentage,
-//     completedLectures,
-//     allLectures,
-//     progress,
-//   });
-// });
+export const generateCertificate = TryCatch(async (req, res) => {
+  return res.status(400).json({ message: "Certificates are only generated for premium course quizzes." });
+});

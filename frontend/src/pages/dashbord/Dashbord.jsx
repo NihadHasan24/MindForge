@@ -5,85 +5,81 @@
 // import { Link } from 'react-router-dom';
 // import { QuizData } from '../../context/QuizContext';
 
+
 import React, { useEffect, useState } from "react";
-import { CourseData } from "../../context/CourseContext";
-import { Link } from 'react-router-dom';
-import { UserData } from "../../context/UserContext";
-import { QuizData } from '../../context/QuizContext';
-import CourseCard from "../../components/coursecard/CourseCard";
-import axios from "axios";
-import { server } from "../../main";
 import "./dashbord.css";
+import { CourseData } from "../../context/CourseContext";
+import CourseCard from "../../components/coursecard/CourseCard";
+import { Link } from 'react-router-dom';
+import { QuizData } from '../../context/QuizContext';
+import { UserData } from "../../context/UserContext";
+import axios from 'axios';
+import { server } from "../../main";
 
 const Dashbord = () => {
   const { mycourse } = CourseData();
   const { quizzes, fetchQuizzes } = QuizData();
   const { user } = UserData();
-  const [courseProgress, setCourseProgress] = useState({});
+  const [certificates, setCertificates] = useState([]);
+  const freeCourses = (mycourse || []).filter((c) => c.isFree || Number(c.price) === 0);
+  const premiumCourses = (mycourse || []).filter((c) => c.isPremiumForUser || (!c.isFree && Number(c.price) > 0));
 
   useEffect(() => {
     fetchQuizzes();
-    fetchAllProgress();
+    fetchCertificates();
   }, [fetchQuizzes]);
 
-  const fetchAllProgress = async () => {
-    const progress = {};
-    for (const course of mycourse) {
-      try {
-        const { data } = await axios.get(
-          `${server}/api/user/progress?course=${course._id}`,
-          {
-            headers: {
-              token: localStorage.getItem("token"),
-            },
-          }
-        );
-        progress[course._id] = data.courseProgressPercentage;
-      } catch (error) {
-        console.log(error);
-      }
+  const fetchCertificates = async () => {
+    try {
+      const { data } = await axios.get(`${server}/api/certificates`, {
+        headers: {
+          token: localStorage.getItem("token"),
+        },
+      });
+      setCertificates(data.certificates);
+    } catch (error) {
+      console.error('Error fetching certificates:', error);
     }
-    setCourseProgress(progress);
   };
 
-  const getMilestone = (progress) => {
-    if (progress === 100) return "Course Completed! 🎉";
-    if (progress >= 75) return "Almost there! 💪";
-    if (progress >= 50) return "Halfway through! 🚀";
-    if (progress >= 25) return "Great start! 👍";
-    return "Just beginning 🌱";
+  const downloadCertificate = async (id) => {
+    try {
+      const token = localStorage.getItem("token");
+      const res = await axios.get(`${server}/api/certificate/quiz/${id}/pdf`, {
+        headers: { token },
+        responseType: 'blob',
+      });
+      const url = window.URL.createObjectURL(new Blob([res.data], { type: 'application/pdf' }));
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `certificate-${id}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (e) {
+      console.error('Download failed', e);
+    }
   };
 
   return (
     <div className="student-dashboard">
-      <h2>Your Learning Journey</h2>
-      <div className="course-progress-container">
-        {mycourse && mycourse.length > 0 ? (
-          mycourse.map((course) => (
-            <div key={course._id} className="course-progress-item">
-              <h3>{course.title}</h3>
-              <div className="progress-bar">
-                <div 
-                  className="progress-fill" 
-                  style={{width: `${courseProgress[course._id] || 0}%`}}
-                ></div>
-              </div>
-              <p className="progress-percentage">{courseProgress[course._id] || 0}% complete</p>
-              <p className="milestone">{getMilestone(courseProgress[course._id] || 0)}</p>
-              <Link to={`/course/study/${course._id}`} className="continue-btn">Continue Learning</Link>
-            </div>
-          ))
+      <h2>Enrolled Courses</h2>
+      <h3>Free Courses</h3>
+      <div className="dashboard-content">
+        {freeCourses && freeCourses.length > 0 ? (
+          freeCourses.map((e) => <CourseCard key={e._id} course={e} />)
         ) : (
-          <p>No courses enrolled yet. Start your learning journey today!</p>
+          <p>No free courses enrolled yet</p>
         )}
       </div>
 
-      <h2>All Enrolled Courses</h2>
+      <h3>Premium Courses</h3>
       <div className="dashboard-content">
-        {mycourse && mycourse.length > 0 ? (
-          mycourse.map((e) => <CourseCard key={e._id} course={e} />)
+        {premiumCourses && premiumCourses.length > 0 ? (
+          premiumCourses.map((e) => <CourseCard key={e._id} course={e} />)
         ) : (
-          <p>No courses enrolled yet. Explore our course catalog!</p>
+          <p>No premium courses enrolled yet</p>
         )}
       </div>
 
@@ -99,7 +95,7 @@ const Dashbord = () => {
             ))}
           </ul>
         ) : (
-          <p>No quizzes available at the moment. Check back later!</p>
+          <p>No quizzes available</p>
         )}
       </div>
 
@@ -115,6 +111,36 @@ const Dashbord = () => {
           </ul>
         </div>
       )}
+
+      <div className="certificates-section">
+        <h3>Your Certificates</h3>
+        {certificates.length > 0 ? (
+          <ul className="certificate-list">
+            {certificates.map((cert) => (
+              <li key={cert._id} className="certificate-item">
+                <h4>
+                  {cert.quiz ? (
+                    <>Quiz: {cert.quiz.title} (Course: {cert.course?.title})</>
+                  ) : (
+                    <>Certificate</>
+                  )}
+                </h4>
+                <p>Issued on: {new Date(cert.issueDate).toLocaleDateString()}</p>
+                {cert._id && (
+                  <button
+                    onClick={() => downloadCertificate(cert._id)}
+                    className="common-btn"
+                  >
+                    Download PDF
+                  </button>
+                )}
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p>You haven't earned any certificates yet. Get full marks in a premium course quiz to earn one.</p>
+        )}
+      </div>
     </div>
   );
 };

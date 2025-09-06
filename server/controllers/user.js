@@ -3,6 +3,7 @@ import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import sendMail, { sendForgotMail } from "../middlewares/sendMail.js";
 import TryCatch from "../middlewares/TryCatch.js";
+import { Certificate } from "../models/Certificate.js";
 
 export const register = TryCatch(async (req, res) => {
   const { email, name, password } = req.body;
@@ -163,4 +164,34 @@ export const resetPassword = TryCatch(async (req, res) => {
   await user.save();
 
   res.json({ message: "Password Reset" });
+});
+
+export const getUserCertificates = TryCatch(async (req, res) => {
+  const certificates = await Certificate.find({ user: req.user._id })
+    .populate('course', 'title')
+    .populate('quiz', 'title')
+    .sort({ issueDate: -1 });
+  res.status(200).json({ certificates });
+});
+
+export const getLeaderboard = TryCatch(async (_req, res) => {
+  const users = await User.find().select('name email quizResults');
+  const board = users.map((u) => {
+    const results = Array.isArray(u.quizResults) ? u.quizResults : [];
+    const totalScore = results.reduce((acc, r) => acc + (r.score || 0), 0);
+    const totalQuestions = results.reduce((acc, r) => acc + (r.totalQuestions || 0), 0);
+    const attempts = results.length;
+    const percent = totalQuestions > 0 ? Number(((totalScore * 100) / totalQuestions).toFixed(2)) : 0;
+    return {
+      userId: u._id,
+      name: u.name,
+      email: u.email,
+      totalScore,
+      totalQuestions,
+      attempts,
+      percent,
+    };
+  });
+  board.sort((a, b) => (b.totalScore - a.totalScore) || (b.percent - a.percent));
+  res.json({ leaderboard: board });
 });
